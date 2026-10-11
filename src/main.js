@@ -279,7 +279,7 @@ function loop() {
   try { step(dt); } catch (e) { if (!App.err) { App.err = String(e && e.stack || e); console.error(e); } }
   G.renderer.info.reset(); render(dt); App.info = Object.assign({}, G.renderer.info.render);
 }
-App.jobStart = (k) => ACT.startJob(k); App.raceStart = (k) => ACT.startRace(k); App.trafficInfo = () => { const a = TR.CARS.filter((c) => c.alive); return JSON.stringify({ alive: a.length, moving: a.filter((c) => c.v > 1).length, waiting: a.filter((c) => c.wait > 5).length, peds: TR.PEDS.filter((p) => p.alive).length }); };
+App.jobStart = (k) => ACT.startJob(k); App.jobEnd = () => ACT.endJob && ACT.endJob(false); App.raceStart = (k) => ACT.startRace(k); App.trafficInfo = () => { const a = TR.CARS.filter((c) => c.alive); return JSON.stringify({ alive: a.length, moving: a.filter((c) => c.v > 1).length, waiting: a.filter((c) => c.wait > 5).length, peds: TR.PEDS.filter((p) => p.alive).length }); };
 App.sim = (sec, h = 1 / 30) => { for (let t = 0; t < sec; t += h) step(h); };
 App.step = step; App.start = start; App.getIn = getIn; App.getOut = getOut; App.menu = menu; App.openMap = openMap; App.respawn = respawn;
 load(); $('nameIn').value = S.d.name || '';

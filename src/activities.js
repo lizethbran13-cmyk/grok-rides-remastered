@@ -145,7 +145,7 @@ const JOBS = {
   tow: { name: 'Tow Job', icon: '🪝', need: ['tow'], lend: 'tow', desc: 'A car broke down. Hook it and haul it to the tow yard.' },
   cop: { name: 'Police Patrol', icon: '🚓', need: ['police'], lend: 'police', desc: 'A robber is getting away! Catch them in the Cruiser.' },
   tour: { name: 'Sky Tour', icon: '🎈', need: ['heli', 'plane', 'seaplane', 'balloon'], desc: 'Fly tourists through 5 sky rings over the best sights.' },
-  icecream: { name: 'Ice Cream Rounds', icon: '🍦', need: ['icecream'], desc: 'Stop anywhere in town, play the chime and serve the right flavors.' }
+  icecream: { name: 'Ice Cream Rounds', icon: '🍦', need: ['icecream'], lend: 'icecream', desc: 'Stop anywhere in town, play the chime and serve the right flavors.' }
 };
 export function jobBoard(filter) {
   const rows = Object.entries(JOBS).filter(([k]) => !filter || k === filter || filter === 'delivery').map(([k, j]) => { const ok = canDo(k); return `<div class="item ${ok ? '' : ''}"><div class="ic">${j.icon}</div><div class="grow"><b>${j.name}</b><small>${j.desc}</small><small>${ok ? '✅ Ready' : j.lend ? '🔑 We\'ll lend you one' : '🔒 Needs: ' + j.need.map((t) => VEH[t].name).join(' or ')}</small></div><button class="btn ${ok || j.lend ? 'green' : 'gray'} small" data-a="go" data-v="${k}" ${ok || j.lend ? '' : 'disabled'}>GO</button></div>`; }).join('');
@@ -205,7 +205,7 @@ function updateJob(dt) {
   if ((j.t * 4 | 0) !== (j.lt || 0)) { j.lt = j.t * 4 | 0; showJobBox(); }
 }
 function finishJob(bonus) { const j = ST.job; const pay = (j.pay || 0) + (bonus || 0); S.d.stats.jobs++; save(); SFX.win(); bigText('✅ JOB DONE!'); if (pay) SHOP.earn(pay, JOBS[j.kind].name); endJob(); }
-function endJob() { const j = ST.job; if (!j) return; if (towed) { G.scene.remove(towed.V.root); towed = null; } if (robber) { G.scene.remove(robber.V.root); robber = null; } if (j.kind === 'fire' && j.fire && fires.includes(j.fire)) { G.scene.remove(j.fire.g); fires.splice(fires.indexOf(j.fire), 1); water.visible = false; } ST.job = null; MK.a.visible = false; ST.setGps(null); showJobBox(); }
+export function endJob() { const j = ST.job; if (!j) return; if (towed) { G.scene.remove(towed.V.root); towed = null; } if (robber) { G.scene.remove(robber.V.root); robber = null; } if (j.kind === 'fire' && j.fire && fires.includes(j.fire)) { G.scene.remove(j.fire.g); fires.splice(fires.indexOf(j.fire), 1); water.visible = false; } ST.job = null; MK.a.visible = false; ST.setGps(null); showJobBox(); }
 /* ---------------- street races ---------------- */
 const RACES = [
   { id: 'city', name: 'Grok City Sprint', icon: '🏙️', pts: [[480, -180], [760, -180], [760, 100], [480, 100], [480, -320]], laps: 1, prize: 400, opp: ['sports', 'muscle', 'compact'] },
