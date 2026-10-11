@@ -104,12 +104,12 @@ function updateCamera(dt) {
     let want = c.yaw; const sp = Math.hypot(c.vx, c.vz); if (c.speed < -3 && !air) want = c.yaw; // reversing: keep looking forward (no spin)
     base = want; dist = (Math.max(4.5, c.len) * 0.95 + 5.5 + Math.min(4, sp * 0.06)) * (air ? 1.35 : 1); pitch = air ? 0.3 : 0.26; if (c.kind === 'balloon') { dist = 20; pitch = 0.35; ty = c.y + 6; }
   } else { tx = ME.x; ty = ME.y + 1.5; tz = ME.z; base = CAM.walkYaw != null ? CAM.walkYaw : ME.yaw; dist = 6.6; pitch = 0.3; Hh = 1.7; }
-  if (ST.inside) { dist = Math.min(dist, ST.inside.camDist || 7.5); pitch = 0.42; }
+  if (ST.inside) { dist = 9; pitch = 0.5; }
   dist *= I.zoom;
   // drag to look around; it eases back behind you after a moment
   I.camT += dt; if (I.camT > 1.6 && ST.mode === 'drive') { I.camDX = damp(I.camDX, 0, 2.2, dt); I.camDY = damp(I.camDY, 0, 2.2, dt); }
   I.camDY = clamp(I.camDY, -0.22, 0.75);
-  if (ST.mode !== 'drive') { CAM.walkYaw = (CAM.walkYaw == null ? ME.yaw : CAM.walkYaw) - I.camDX; I.camDX = 0; base = CAM.walkYaw; }
+  if (ST.mode !== 'drive') { CAM.walkYaw = (CAM.walkYaw == null ? ME.yaw : CAM.walkYaw) - I.camDX; I.camDX = 0; if (ST.inside) { const d = angD(Math.PI, CAM.walkYaw); CAM.walkYaw = Math.PI + clamp(d, -0.7, 0.7); if (I.camT > 1.5) CAM.walkYaw = Math.PI + damp(d, 0, 2, dt); } if (!ST.inside && ME.moving > 0.3 && I.camT > 1.2) CAM.walkYaw += angD(CAM.walkYaw, ME.yaw) * Math.min(1, dt * 0.9 * ME.moving); base = CAM.walkYaw; }
   const yawT = base - (ST.mode === 'drive' ? I.camDX : 0);
   CAM.yaw = camSnap ? yawT : CAM.yaw + angD(CAM.yaw, yawT) * (1 - Math.exp(-(ST.mode === 'drive' ? 4.2 : 6) * dt));
   const pt = clamp(pitch + I.camDY, 0.05, 1.1); CAM.pitch = camSnap ? pt : damp(CAM.pitch, pt, 6, dt);
@@ -163,7 +163,7 @@ function hud(dt) {
   hudT += dt; if (hudT < 0.1) return; hudT = 0;
   const c = ST.car, px = ST.mode === 'drive' ? c.x : ME.x, pz = ST.mode === 'drive' ? c.z : ME.z;
   $('moneyN').textContent = fmt(S.d.money);
-  const reg = ST.inside ? null : W.regionAt(px, pz); ST.region = reg; $('regionN').textContent = ST.inside ? ST.inside.name : (W.REGIONS[reg] || regName[reg] || 'Countryside'); $('clockN').textContent = clockStr();
+  const reg = ST.inside ? null : W.regionAt(px, pz); ST.region = reg; $('minimap').classList.toggle('hidden', !!ST.inside); $('bMap').classList.toggle('hidden', !!ST.inside); $('regionN').textContent = ST.inside ? ST.inside.name : (W.REGIONS[reg] || regName[reg] || 'Countryside'); $('clockN').textContent = clockStr();
   if (ST.mode === 'drive') {
     const mph = Math.abs(c.isAirK() ? Math.hypot(c.vx, c.vz) : c.speed) * 2.237; $('spdN').textContent = Math.round(mph);
     const a = $('altN'); if (c.isAirK()) { a.classList.remove('hidden'); a.textContent = '↑ ' + Math.max(0, Math.round((c.y - W.heightAt(c.x, c.z)) * 3.28)) + ' ft'; } else a.classList.add('hidden');
@@ -279,6 +279,7 @@ function loop() {
   try { step(dt); } catch (e) { if (!App.err) { App.err = String(e && e.stack || e); console.error(e); } }
   G.renderer.info.reset(); render(dt); App.info = Object.assign({}, G.renderer.info.render);
 }
+App.jobStart = (k) => ACT.startJob(k); App.raceStart = (k) => ACT.startRace(k); App.trafficInfo = () => { const a = TR.CARS.filter((c) => c.alive); return JSON.stringify({ alive: a.length, moving: a.filter((c) => c.v > 1).length, waiting: a.filter((c) => c.wait > 5).length, peds: TR.PEDS.filter((p) => p.alive).length }); };
 App.sim = (sec, h = 1 / 30) => { for (let t = 0; t < sec; t += h) step(h); };
 App.step = step; App.start = start; App.getIn = getIn; App.getOut = getOut; App.menu = menu; App.openMap = openMap; App.respawn = respawn;
 load(); $('nameIn').value = S.d.name || '';

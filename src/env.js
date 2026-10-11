@@ -59,6 +59,7 @@ export function updateEnv(dt, cam, regKey, inside) {
   m.sunI = (2.4 * (1 - nD * 0.25) * (1 - wW * 0.5)) * (1 - nN) + 0.32 * nN; m.hemiI = (1.05 - wW * 0.1) * (1 - nN) + 0.5 * nN;
   m.fogNear = (inside ? 400 : 230 - wW * 120); m.fogFar = (inside ? 900 : 680 - wW * 300) * (1 - nN * 0.15); m.exp = 1.0 + nN * 0.12; m.env = 0.45 * (1 - nN * 0.55);
   m.bloomT = base === 'snow' ? 2.2 : 0.95; m.bloomS = base === 'snow' ? 0.14 : 0.28 + nN * 0.12;
+  if (inside) { m.sunI = 1.25; m.hemiI = 0.8; m.exp = 0.95; m.env = 0.5; m.bloomS = 0.2; }
   if (!G.mood) G.mood = Object.assign({}, m);
   // night: windows, lamps, neon
   for (const k in NIGHT) { const mt = NIGHT[k], ni = mt.userData.night; mt.emissiveIntensity = (k.startsWith('neon') ? 0.25 : 0) + ni * nN * (k === 'glassDark' ? 1 : 1); }

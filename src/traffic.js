@@ -107,7 +107,7 @@ function playerHits(dt) {
 /* ---------------- pedestrians on the sidewalks ---------------- */
 const walkE = EDGES.filter((e) => e.walk);
 function spawnPed(p, px, pz) {
-  for (let t = 0; t < 20; t++) { const e = walkE[(Math.random() * walkE.length) | 0], s = Math.random() * e.len, side = Math.random() < 0.5 ? 1 : -1; W.edgePoint(e, s, side * (e.w / 2 + 2.0), _p); if (W.surfAt(_p.x, _p.z) !== W.S_WALK) continue; const d = Math.hypot(_p.x - px, _p.z - pz); if (d < 40 || d > 170) continue; Object.assign(p, { e, s, side, dir: Math.random() < 0.5 ? 1 : -1, alive: true, dodge: 0 }); p.P.root.visible = true; return; }
+  for (let t = 0; t < 20; t++) { const e = walkE[(Math.random() * walkE.length) | 0], s = Math.random() * e.len, side = Math.random() < 0.5 ? 1 : -1; W.edgePoint(e, s, side * (e.w / 2 + 2.0), _p); if (W.surfAt(_p.x, _p.z) !== W.S_WALK) continue; const d = Math.hypot(_p.x - px, _p.z - pz); if (d < 40 || d > 170) continue; Object.assign(p, { e, s, side, dir: Math.random() < 0.5 ? 1 : -1, alive: true, dodge: 0, x: _p.x, z: _p.z }); p.P.root.visible = true; return; }
 }
 function updatePed(p, dt) {
   p.s += p.dir * p.v * dt; if (p.s < 2 || p.s > p.e.len - 2) { p.dir *= -1; p.s = clamp(p.s, 2, p.e.len - 2); }

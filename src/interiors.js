@@ -77,7 +77,7 @@ export function enter(b, ov) {
 function buildRoom(b, ov) {
   const kind = b.home ? 'home' : b.kind || (b.place && b.place.kind) || 'apartment', sh = shellOf(b), g = new THREE.Group(); g.name = 'room';
   const k = new Kit(g), hw = sh.w / 2, hd = sh.d / 2, H = sh.h, rnd = (() => { let s = hashS(b.id); return () => (s = (s * 16807) % 2147483647) / 2147483647; })();
-  room = { b, kind, g, w: sh.w, d: sh.d, h: H, k, st: [], npc: [], spin: [], vehs: [], name: b.name || ({ apartment: 'Apartments', office: 'Offices', house: 'House', shop: 'Shop' }[kind] || 'Inside'), camDist: 7.5 };
+  room = { b, kind, g, w: sh.w, d: sh.d, h: H, k, st: [], npc: [], spin: [], vehs: [], camYaw: Math.PI, name: b.name || ({ apartment: 'Apartments', office: 'Offices', house: 'House', shop: 'Shop' }[kind] || 'Inside'), camDist: 7.5 };
   // shell: floor, walls, ceiling, skirting, ceiling lights, windows (glowing panes), door
   const hs = b.home && (ov || S.d.homes[b.id]) || {}; const visiting = !!ov; const wallC = b.home ? (hs.wall || WALLS[0]) : ({ fire: 0xfee2e2, police: 0xe0e7ff, arcade: 0x312e81, lab: 0xe0f2fe, lodge: 0xd6b48a, museum: 0xfef3c7, dealer: 0xf8fafc, garage: 0xe5e7eb, towyard: 0xfed7aa, raceclub: 0x1f2937, hotel: 0xfef3c7 }[kind] || [0xfef3c7, 0xdbeafe, 0xdcfce7, 0xfde2e4, 0xede9fe][hashS(b.id) % 5]);
   const floorC = b.home ? (FLOORS[hs.floor || 'wood'] || FLOORS.wood).c : ({ garage: 0x9ca3af, towyard: 0x9ca3af, fire: 0x9ca3af, depot: 0x9ca3af, cargo: 0x9ca3af, dealer: 0xf1f5f9, arcade: 0x1e1b4b, lodge: 0x92400e, hotel: 0xb91c1c, raceclub: 0x111827 }[kind] || [0xc08a5a, 0xe2e8f0, 0xd6b48a, 0xf1f5f9][hashS(b.id) % 4]);
@@ -85,14 +85,16 @@ function buildRoom(b, ov) {
   if (kind === 'dealer' || kind === 'arcade' || (b.home && hs.floor === 'check')) for (let i = 0; i < sh.w / 2; i++) for (let j = 0; j < sh.d / 2; j++) if ((i + j) % 2) k.rb(kind === 'arcade' ? 0x4c1d95 : 0x1f2937, 1.98, 0.02, 1.98, -hw + 1 + i * 2, 0.005, -hd + 1 + j * 2, 0, 0.005, true);
   const wm = M(wallC, { r: 0.85 });
   k.rb(wm, sh.w, H, 0.3, 0, H / 2, -hd - 0.15, 0, 0.04, true).rb(wm, 0.3, H, sh.d, -hw - 0.15, H / 2, 0, 0, 0.04, true).rb(wm, 0.3, H, sh.d, hw + 0.15, H / 2, 0, 0, 0.04, true);
-  k.rb(wm, hw - 1.1, H, 0.3, -(hw + 1.1) / 2, H / 2, hd + 0.15, 0, 0.04, true).rb(wm, hw - 1.1, H, 0.3, (hw + 1.1) / 2, H / 2, hd + 0.15, 0, 0.04, true).rb(wm, 2.2, H - 2.6, 0.3, 0, H - (H - 2.6) / 2, hd + 0.15, 0, 0.04, true);
-  k.rb(M(0xffffff, { r: 0.4, e: 0xfff5e0, ei: 0.25 }), sh.w + 0.6, 0.2, sh.d + 0.6, 0, H + 0.1, 0, 0, 0.02, true);
+  // dollhouse cut-away: the front wall is only a low knee wall + door frame, so the camera can sit outside it and see the whole room
+  k.rb(wm, hw - 1.1, 0.9, 0.3, -(hw + 1.1) / 2, 0.45, hd + 0.15, 0, 0.04, true).rb(wm, hw - 1.1, 0.9, 0.3, (hw + 1.1) / 2, 0.45, hd + 0.15, 0, 0.04, true);
+  for (const s of [-1, 1]) k.rb(wm, 0.3, 2.7, 0.3, s * 1.25, 1.35, hd + 0.15, 0, 0.06, true); k.rb(wm, 2.8, 0.3, 0.3, 0, 2.75, hd + 0.15, 0, 0.06, true);
+  k.rb(M(0xffffff, { r: 0.4, e: 0xfff5e0, ei: 0.25 }), sh.w + 0.6, 0.2, sh.d + 0.3, 0, H + 0.1, -0.15, 0, 0.02, true);
   for (const s of [-1, 1]) k.rb(0xffffff, sh.w, 0.15, 0.04, 0, 0.075, s * (hd - 0.02), 0, 0.01, true);
   for (let i = 0; i < Math.floor(sh.w / 5); i++) for (let j = 0; j < Math.floor(sh.d / 5); j++) k.rb(M(0xfffbeb, { e: 0xfff1c4, ei: 1.4, r: 0.3 }), 1.2, 0.06, 1.2, -hw + 2.5 + i * 5, H - 0.03, -hd + 2.5 + j * 5, 0, 0.02, true);
   const win = M(0xbfe6ff, { r: 0.05, m: 0.1, e: 0x9fd6ff, ei: 0.55 });
   for (let i = 0; i < Math.floor(sh.d / 4); i++) for (const s of [-1, 1]) { const z = -hd + 2 + i * 4; k.rb(win, 0.06, 1.5, 2.2, s * (hw - 0.02), 2.0, z, 0, 0.02, true).rb(0xffffff, 0.1, 0.1, 2.4, s * (hw - 0.04), 1.2, z, 0, 0.02, true); }
   k.rb(M(0x7c2d12, { r: 0.6 }), 2.2, 2.6, 0.08, 0, 1.3, hd + 0.05, 0, 0.03, true).rb(M(0xfacc15, { r: 0.3, m: 0.8 }), 0.08, 0.08, 0.12, 0.8, 1.2, hd - 0.02, 0, 0.02, true);
-  k.rb(M(0x22c55e, { e: 0x22c55e, ei: 0.8 }), 1.6, 0.5, 0.04, 0, 2.95, hd - 0.04, 0, 0.04).text('EXIT', 0.24, 0xffffff, 0, 2.86, hd - 0.08, Math.PI);
+  k.rb(M(0x22c55e, { e: 0x22c55e, ei: 0.8 }), 1.2, 0.4, 0.06, 0, 3.15, hd + 0.15, 0, 0.04);
   station(0, hd - 0.9, 1.8, '🚪 Go outside', () => leave(), 3);
   const npc = (x, z, ry, pose = 'idle', look, label, talk) => { const P = makePerson(look || randLook(hashS(b.id) + x * 7 + z)); P.root.position.set(IX + x, IY, IZ + z); P.root.rotation.y = ry; g.add(P.root); const o = { P, pose, x, z }; room.npc.push(o); k.solidBox(x, z, 0.7, 0.7, 1.8); if (label) station(x + Math.sin(ry) * 1.3, z + Math.cos(ry) * 1.3, 1.6, label, talk || (() => toast(lines(kind))), 2); return o; };
   const staff = (x, z, label, fn) => npc(x, z, 0, 'serve', null, label, fn);
@@ -188,6 +190,6 @@ export function updateInterior(dt) {
 export function walkCollide(p) { if (!room) return; const hw = room.w / 2 - 0.4, hd = room.d / 2 - 0.4; p.x = Math.max(IX - hw, Math.min(IX + hw, p.x)); p.z = Math.max(IZ - hd, Math.min(IZ + hd, p.z));
   for (const s of room.k.solid) { const x0 = IX + s.x0 - 0.35, x1 = IX + s.x1 + 0.35, z0 = IZ + s.z0 - 0.35, z1 = IZ + s.z1 + 0.35; if (p.x > x0 && p.x < x1 && p.z > z0 && p.z < z1 && !(s.top && ST.me.y > IY + s.top - 0.3)) { const dl = p.x - x0, dr = x1 - p.x, dt = p.z - z0, db = z1 - p.z, m = Math.min(dl, dr, dt, db); if (m === dl) p.x = x0; else if (m === dr) p.x = x1; else if (m === dt) p.z = z0; else p.z = z1; } } }
 export function floorAt(x, z, y) { if (!room) return 0; let g = IY; for (const s of room.k.solid) if (s.top && x > IX + s.x0 && x < IX + s.x1 && z > IZ + s.z0 && z < IZ + s.z1 && y > IY + s.top - 0.35) g = Math.max(g, IY + s.top); return g; }
-export function clampCam(d, t) { if (!room) return; const hw = room.w / 2 - 0.35, hd = room.d / 2 - 0.35; d.x = Math.max(IX - hw, Math.min(IX + hw, d.x)); d.z = Math.max(IZ - hd, Math.min(IZ + hd, d.z)); d.y = Math.max(IY + 0.8, Math.min(IY + room.h - 0.35, d.y)); }
+export function clampCam(d, t) { if (!room) return; const hw = room.w / 2 - 0.35, hd = room.d / 2 - 0.35; d.x = Math.max(IX - hw, Math.min(IX + hw, d.x)); d.z = Math.max(IZ - hd, Math.min(IZ + hd + 7, d.z)); d.y = Math.max(IY + 0.8, Math.min(IY + room.h + (d.z > IZ + hd ? 1.2 : -0.35), d.y)); }
 export const inRoom = () => room;
 export function rebuild() { if (!room) return; const b = room.b; const px = ST.me.x, pz = ST.me.z, yw = ST.me.yaw; G.scene.remove(room.g); room.g.traverse((o) => { if (o.geometry && o.geometry.userData.batch) o.geometry.dispose(); }); room.vehs.forEach((V) => disposeVehicle(V)); for (const o of hidden) o.visible = true; room = null; ST.inside = null; buildRoom(b); ST.me.x = px; ST.me.z = pz; ST.me.yaw = yw; }
