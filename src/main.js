@@ -22,7 +22,7 @@ import * as ACT from './activities.js';
 import * as SHOP from './shops.js';
 import * as NET from './coop.js';
 const Q = new URLSearchParams(location.search);
-const App = window.__rr = Object.assign(ST, { ready: false, G, W, S, I, SKY, BLD, PLACES });
+const App = window.__rr = Object.assign(ST, { ready: false, G, W, S, I, SKY, BLD, PLACES, THREE });
 initGfx(document.getElementById('c'));
 G.camera.far = 1300; G.camera.near = 0.25; G.camera.updateProjectionMatrix();
 G.scene.add(CHUNKS.root);
@@ -207,7 +207,7 @@ function start(online) {
   if (started) return; started = true; initAudio(); setSound(S.d.opts.sound !== false);
   const nm = ($('nameIn').value || '').trim().slice(0, 12); if (nm) S.d.name = nm; save(true);
   $('title').classList.add('hidden'); $('hud').classList.remove('hidden'); I.enabled = true;
-  rebuildMe(); SKY.tod = S.d.time != null ? S.d.time : 0.36;
+  rebuildMe(); SKY.tod = S.d.time != null ? S.d.time : 0.36; SKY.snap = true;
   respawn(true);
   if (S.d.imported && !S.d.importMsg) { S.d.importMsg = 1; save(); setTimeout(() => toast('🎁 Welcome back! Half of your old Grok Rides cash came with you.'), 1200); }
   setTimeout(() => toast('Hold <b>GAS</b> to drive · drag the left side to steer'), 600);
@@ -262,7 +262,7 @@ function step(dt) {
   if (ST.mode !== 'title') {
     TR.updateTraffic(dt); ACT.updateActivities(dt); IN.updateInterior(dt); NET.updateNet(dt);
     for (const f of ST.hooks.update) f(dt);
-    updateCamera(dt); updateAct(); hud(dt); refreshGpsT += dt; if (refreshGpsT > 0.15) { refreshGpsT = 0; refreshGps(); }
+    if (!App.freeCam) updateCamera(dt); updateAct(); hud(dt); refreshGpsT += dt; if (refreshGpsT > 0.15) { refreshGpsT = 0; refreshGps(); }
     saveT += dt; if (saveT > 10) { saveT = 0; S.d.time = SKY.tod; if (ST.car) { S.d.fuel = S.d.fuel || {}; S.d.fuel[ST.car.type] = ST.car.fuel; } save(); }
   } else { const a = ST.t * 0.05; App.view(620 + Math.cos(a) * 260, 80, -120 + Math.sin(a) * 260, 620, 18, -120); TR.updateTraffic(dt); }
   const reg = ST.region, rk = reg === 'desert' ? 'desert' : reg === 'tundra' || (reg === 'mtn' && G.camera.position.y > 70) ? 'snow' : 'day';

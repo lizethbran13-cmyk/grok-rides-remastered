@@ -76,7 +76,7 @@ export function realty(focus) {
 }
 export function sleep(home, b) {
   closePanel(); fade(true); SFX.click();
-  setTimeout(() => { SKY.tod = 0.3; if (Math.random() < 0.6) setWeather('clear'); if (home && b) { S.d.mainHome = b.id; } S.d.time = SKY.tod; if (ST.car) { ST.car.dmg = 0; ST.car.fuel = 1; } save(true); fade(false); bigText('☀️ GOOD MORNING!'); toast(home ? '🛏️ Rested! Your ride is fixed & fueled. You\'ll respawn here.' : '🛏️ Rested till morning!'); }, 700);
+  setTimeout(() => { SKY.tod = 0.3; SKY.snap = true; if (Math.random() < 0.6) setWeather('clear'); if (home && b) { S.d.mainHome = b.id; } S.d.time = SKY.tod; if (ST.car) { ST.car.dmg = 0; ST.car.fuel = 1; } save(true); fade(false); bigText('☀️ GOOD MORNING!'); toast(home ? '🛏️ Rested! Your ride is fixed & fueled. You\'ll respawn here.' : '🛏️ Rested till morning!'); }, 700);
 }
 export function hotel() { const c = panel(head('🛎️ Grand Grok Hotel') + '<div class="item"><div class="ic">🛏️</div><div class="grow"><b>Comfy room for the night</b><small>Sleep till morning + Room Service Feast (+10% job pay for 5 min)</small></div><button class="btn gold small" data-a="r">$40</button></div>' + close); wire(c, { close: closePanel, r: () => { if (!pay(40)) return; S.d.buffs.pay = Date.now() + 300000; sleep(false); } }); }
 export function decorate(b, slot) {

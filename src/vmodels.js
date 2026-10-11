@@ -1,6 +1,7 @@
 // Grok Rides Remastered - smooth, rounded procedural vehicles (spline side-profiles with beveled edges, lathe tyres, real rims,
 // glass cabins with seats and a seated driver). Origin = ground under the middle of the vehicle, +z = forward, +x = driver side.
 import * as THREE from 'three';
+import { poolMat } from './build3d.js';
 import { M, glow } from './mats.js';
 import { GEO, Batch, cg, lathe } from './geo.js';
 import { makePerson, animPerson } from './people.js';
@@ -255,8 +256,8 @@ export function makeVehicle(type, opts = {}) {
   if (opts.rider !== false && !opts.lite) { const P = makePerson(opts.rider || {}); P.root.scale.setScalar(0.82); V.rider = P; (V.lean || V.body).add(P.root); P.root.position.set(V.seat.x, V.seat.y, V.seat.z); animPerson(P, V.pose, 1, 0, 0); for (let i = 0; i < 20; i++) animPerson(P, V.pose, 0.1, 0, 0); P.root.visible = opts.riderVisible !== false; }
   if (opts.lite) liteMerge(V);
   // night head-light glow cones (cheap additive geometry)
-  if (V.heads.length && !opts.noBeam) { const bm = cg('beamM', () => { const m = new THREE.MeshBasicMaterial({ color: 0xfff1c4, transparent: true, opacity: 0.11, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }); m.userData.keep = true; return m; });
-    V.beams = V.heads.slice(0, 2).map((h) => { const c = new THREE.Mesh(cg('beamG', () => { const g = new THREE.ConeGeometry(1.6, 9, 16, 1, true); g.translate(0, -4.5, 0); g.rotateX(-PI / 2); g.rotateX(PI); return g; }), bm); c.position.copy(h.position); c.rotation.x = 0.07; c.visible = false; c.castShadow = false; h.parent.add(c); return c; }); }
+  if (V.heads.length && !opts.noBeam) { const pm = cg('beamPool', () => poolMat(0xffe7b0, 0.75)), pg = cg('beamPG', () => new THREE.PlaneGeometry(1, 1).rotateX(-PI / 2));
+    const L = V.dims ? V.dims.L : 4, Wd = V.dims ? V.dims.W : 1.9, c = new THREE.Mesh(pg, pm); c.scale.set(Wd * 2.6, 1, 12); c.position.set(0, 0.07, L / 2 + 5.4); c.visible = false; c.castShadow = false; c.renderOrder = 3; V.root.add(c); V.beams = [c]; }
   return V;
 }
 // traffic cars: merge every static non-paint, non-glass part into one mesh (3 draw calls per car)

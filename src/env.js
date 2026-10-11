@@ -1,17 +1,17 @@
 // day/night cycle + dynamic weather (rain streaks, puddles, wet shiny roads, lightning)
 import * as THREE from 'three';
 import { G } from './gfx.js';
-import { NIGHT } from './build3d.js';
+import { NIGHT, LAMPS, POOL, poolMat } from './build3d.js';
 import { MAT } from './scenery.js';
 import { ENV } from './vehicle.js';
 import * as W from './world.js';
 import { SFX, ambience } from './audio.js';
-export const SKY = { tod: 0.36, day: 1, rain: 0, rainT: 0, want: 0, wet: 0, night: 0, wx: 'clear', wxT: 140, frozen: false, DAY: 900 };
+export const SKY = { tod: 0.36, day: 1, rain: 0, rainT: 0, want: 0, wet: 0, night: 0, wx: 'clear', wxT: 140, frozen: false, DAY: 900, snap: true };
 const C = (h) => new THREE.Color(h);
 const PAL = {
-  day: { top: C(0x1ea7ff), hor: C(0xc4f1ff), fog: C(0xb9e6fb), sun: C(0xfff4dc), gnd: C(0x9fd27a) },
-  desert: { top: C(0x2b9bff), hor: C(0xffe9c2), fog: C(0xf6dfbd), sun: C(0xfff0d0), gnd: C(0xe8c690) },
-  snow: { top: C(0x4aa6ff), hor: C(0xe6f6ff), fog: C(0xdcedfb), sun: C(0xfff8ea), gnd: C(0xdbe7f3) },
+  day: { top: C(0x0a7cf5), hor: C(0x8fd6ff), fog: C(0xa3d8f6), sun: C(0xfff1d6), gnd: C(0x5f7d48) },
+  desert: { top: C(0x1580f0), hor: C(0xffd9a0), fog: C(0xf0cf9e), sun: C(0xfff0d0), gnd: C(0x9c7a52) },
+  snow: { top: C(0x2a8cf5), hor: C(0xcfeaff), fog: C(0xc9e2f7), sun: C(0xfff8ea), gnd: C(0x8a9aae) },
   dusk: { top: C(0x5b4bd6), hor: C(0xffa77a), fog: C(0xf3a888), sun: C(0xffb877), gnd: C(0xb08a7a) },
   night: { top: C(0x0a1238), hor: C(0x24346e), fog: C(0x1c2850), sun: C(0x9fb4ff), gnd: C(0x2a3550) },
   rain: { top: C(0x4b5d86), hor: C(0x9aabc6), fog: C(0x8d9db8), sun: C(0xd6e2ff), gnd: C(0x6f8a7a) }
@@ -32,7 +32,19 @@ export function initEnv() {
   const pg = new THREE.CylinderGeometry(1, 1, 0.02, 20); const pm = new THREE.MeshPhysicalMaterial({ color: 0x3b4a66, roughness: 0.02, metalness: 0.2, clearcoat: 1, transparent: true, opacity: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -6, polygonOffsetUnits: -6 });
   puddles = new THREE.InstancedMesh(pg, pm, 90); puddles.count = 0; puddles.castShadow = false; puddles.receiveShadow = false; puddles.frustumCulled = false; G.scene.add(puddles); puddles.lastAt = null;
   if (MAT.road) roadCol0 = MAT.road.color.clone();
+  // lamp light pools on the ground (one instanced draw, fades in at night)
+  { const n = LAMPS.length / 2, pg = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), im = new THREE.InstancedMesh(pg, poolMat(0xffd28a, 0.85), n); const mm = new THREE.Matrix4();
+    for (let i = 0; i < n; i++) { const x = LAMPS[i * 2], z = LAMPS[i * 2 + 1]; mm.makeScale(15, 1, 15).setPosition(x, W.heightAt(x, z) + 0.08, z); im.setMatrixAt(i, mm); }
+    im.frustumCulled = false; im.renderOrder = 3; im.visible = false; G.scene.add(im); lampPools = im; }
+  // puffy 3D clouds (real merged spheres, matte, no fog) on a slow ring around the camera
+  const cm = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1, emissive: 0xdbeafe, emissiveIntensity: 0.35, fog: false });
+  clouds = new THREE.Group(); const sg = new THREE.SphereGeometry(1, 14, 10);
+  for (let i = 0; i < 16; i++) { const c = new THREE.Group(), a = i / 16 * Math.PI * 2 + Math.random() * 0.3, r = 420 + Math.random() * 180; c.position.set(Math.cos(a) * r, 150 + Math.random() * 90, Math.sin(a) * r);
+    const n = 5 + (Math.random() * 4 | 0); for (let k = 0; k < n; k++) { const m = new THREE.Mesh(sg, cm), s = 14 + Math.random() * 16; m.scale.set(s * 1.4, s * 0.75, s); m.position.set((k - n / 2) * 18 + Math.random() * 8, Math.random() * 8, Math.random() * 14 - 7); c.add(m); }
+    c.lookAt(0, c.position.y, 0); clouds.add(c); }
+  clouds.renderOrder = 0; G.scene.add(clouds); clouds.mat = cm;
 }
+let clouds = null, lampPools = null;
 const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _v = new THREE.Vector3(), _s = new THREE.Vector3();
 function placePuddles(x, z) {
   let n = 0; let sd = Math.floor(x / 40) * 7 + Math.floor(z / 40) * 13;
@@ -56,11 +68,11 @@ export function updateEnv(dt, cam, regKey, inside) {
   const m = G.moodT || (G.moodT = {});
   m.top = mix(t1, 'top', 0, nD, nN, wW, base).getHex(); m.hor = mix(t2, 'hor', 0, nD, nN, wW, base).getHex(); m.fog = mix(t3, 'fog', 0, nD, nN, wW, base).getHex(); m.sunCol = mix(t4, 'sun', 0, nD, nN, wW, base).getHex(); m.gnd = mix(t5, 'gnd', 0, nD, nN, wW, base).getHex();
   m.elev = nN > 0.5 ? 38 : Math.max(8, Math.abs(elev)); m.azim = nN > 0.5 ? 210 : 100 + SKY.tod * 220;
-  m.sunI = (2.4 * (1 - nD * 0.25) * (1 - wW * 0.5)) * (1 - nN) + 0.32 * nN; m.hemiI = (1.05 - wW * 0.1) * (1 - nN) + 0.5 * nN;
-  m.fogNear = (inside ? 400 : 230 - wW * 120); m.fogFar = (inside ? 900 : 680 - wW * 300) * (1 - nN * 0.15); m.exp = 1.0 + nN * 0.12; m.env = 0.45 * (1 - nN * 0.55);
-  m.bloomT = base === 'snow' ? 2.2 : 0.95; m.bloomS = base === 'snow' ? 0.14 : 0.28 + nN * 0.12;
+  m.sunI = (2.7 * (1 - nD * 0.25) * (1 - wW * 0.5)) * (1 - nN) + 0.2 * nN; m.hemiI = (0.82 - wW * 0.05) * (1 - nN) + 0.3 * nN;
+  m.fogNear = (inside ? 400 : 340 - wW * 200); m.fogFar = (inside ? 900 : 820 - wW * 380) * (1 - nN * 0.15); m.exp = 1.04 + nN * 0.02; m.env = 0.55 * (1 - nN * 0.88);
+  m.bloomT = base === 'snow' ? 2.2 : 0.9; m.bloomS = base === 'snow' ? 0.14 : 0.32 + nN * 0.14;
   if (inside) { m.sunI = 1.25; m.hemiI = 0.8; m.exp = 0.95; m.env = 0.5; m.bloomS = 0.2; }
-  if (!G.mood) G.mood = Object.assign({}, m);
+  if (!G.mood || SKY.snap) { G.mood = Object.assign({}, m); SKY.snap = false; }
   // night: windows, lamps, neon
   for (const k in NIGHT) { const mt = NIGHT[k], ni = mt.userData.night; mt.emissiveIntensity = (k.startsWith('neon') ? 0.25 : 0) + ni * nN * (k === 'glassDark' ? 1 : 1); }
   // wet roads: darker + glossy
@@ -72,6 +84,8 @@ export function updateEnv(dt, cam, regKey, inside) {
   puddles.visible = SKY.wet > 0.05 && !inside; if (puddles.visible) { puddles.material.opacity = Math.min(0.75, SKY.wet * 0.9); if (!puddles.lastAt || Math.hypot(puddles.lastAt[0] - cam.position.x, puddles.lastAt[1] - cam.position.z) > 70) placePuddles(cam.position.x, cam.position.z); }
   // storm lightning
   if (SKY.wx === 'storm' && SKY.rain > 0.8 && !inside) { flashT -= dt; if (flashT < 0) { flashT = 8 + Math.random() * 14; G.flash.position.set(cam.position.x + 60, cam.position.y + 120, cam.position.z - 40); G.flash.intensity = 60; setTimeout(() => SFX.thunder(), 500 + Math.random() * 900); } }
+  POOL.u.uA.value = Math.max(0, nN * 1.15 - 0.15); if (lampPools) lampPools.visible = POOL.u.uA.value > 0.01 && !inside;
+  if (clouds) { clouds.visible = !inside; clouds.position.set(cam.position.x, 0, cam.position.z); clouds.rotation.y += dt * 0.004; const g = 1 - wW * 0.55; clouds.mat.color.setRGB(g, g, g * 1.02); clouds.mat.emissiveIntensity = 0.35 * (1 - nN * 0.9) * g; }
   ambience('rain', inside ? 0.03 * ra : 0.22 * ra);
 }
 export function clockStr() { const h = Math.floor(SKY.tod * 24), mm = Math.floor((SKY.tod * 24 - h) * 60 / 15) * 15, h12 = ((h + 11) % 12) + 1; return (SKY.night > 0.5 ? '🌙 ' : SKY.rain > 0.55 ? '🌧️ ' : SKY.rain > 0.25 ? '⛅ ' : '☀️ ') + h12 + ':' + String(mm).padStart(2, '0') + (h < 12 ? ' AM' : ' PM'); }

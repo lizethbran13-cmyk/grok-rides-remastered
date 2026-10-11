@@ -7,14 +7,15 @@ import * as W from './world.js';
 const { heightAt, surfAt, NODES, EDGES, RASTER, N, WB, CELL } = W;
 export const MAT = {};
 const _c = new THREE.Color();
-const SC = { 0: 0x66bb4c, 1: 0x4b5160, 2: 0xf0cf8e, 3: 0xe2ebf6, 4: 0xb98a5a, 5: 0xd9c08a, 6: 0xfbe4a6, 7: 0xcfd5de, 8: 0x4b5160, 9: 0xb7e4ff, 10: 0xd6d3d1, 11: 0x9b9086 };
+const SC = { 0: 0x4ea83a, 1: 0x4b5160, 2: 0xf0cf8e, 3: 0xe2ebf6, 4: 0xb98a5a, 5: 0xd9c08a, 6: 0xfbe4a6, 7: 0xb9bdc4, 8: 0x4b5160, 9: 0xb7e4ff, 10: 0xb3ab9f, 11: 0x9b9086 };
 function vcol(x, z, h) {
   // average the 3x3 surface neighbourhood so biomes blend softly
   let r = 0, g = 0, b = 0;
   for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) { _c.setHex(SC[surfAt(x + dx * 3, z + dz * 3)] ?? SC[0]); r += _c.r; g += _c.g; b += _c.b; }
   _c.setRGB(r / 9, g / 9, b / 9);
   const s = surfAt(x, z), n = Math.sin(x * 0.07) * Math.cos(z * 0.06) * 0.5 + Math.sin(x * 0.23 + z * 0.19) * 0.5;
-  if (s === 0) { _c.offsetHSL(n * 0.025, -0.02, n * 0.05 - (h > 40 ? 0.06 : 0)); }
+  if (s === 0) { const n2 = Math.sin(x * 0.53 + z * 0.11) * Math.sin(z * 0.47 - x * 0.07); _c.offsetHSL(n * 0.03, 0.04, n * 0.06 + n2 * 0.025 - 0.03 - (h > 40 ? 0.06 : 0)); }
+  else if (s === 10 || s === 7) { const k = (Math.floor(x / 3) + Math.floor(z / 3)) & 1; _c.offsetHSL(0, 0, k ? 0.035 : -0.02); }
   else if (s === 2 || s === 6) _c.offsetHSL(0, 0, n * 0.03);
   else if (s === 5) _c.offsetHSL(0, -0.1, Math.max(-0.25, h * 0.03));
   return _c;

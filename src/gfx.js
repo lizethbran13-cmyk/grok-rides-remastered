@@ -81,16 +81,16 @@ function buildComposer() {
     const ao = new GTAOPass(G.scene, G.camera, w, h); ao.setGBuffer(c.renderTarget2.depthTexture); // its own normal target is never drawn, so it never allocates
     const aoRender = ao.render; ao.render = function (rr, wb, rb, dt, mask) { const d = rb.depthTexture; if (d && this.gtaoMaterial.uniforms.tDepth.value !== d) { this.depthTexture = d; this.gtaoMaterial.uniforms.tDepth.value = d; this.pdMaterial.uniforms.tDepth.value = d; } return aoRender.call(this, rr, wb, rb, dt, mask); };
     ao.output = GTAOPass.OUTPUT.Default;
-    ao.updateGtaoMaterial({ radius: 1.2, distanceExponent: 1.4, thickness: 1.5, scale: 1.0, samples: 12 });
+    ao.updateGtaoMaterial({ radius: 2.2, distanceExponent: 1.4, thickness: 1.5, scale: 1.0, samples: 12 });
     ao.updatePdMaterial({ lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: 6, rings: 2, samples: 12 });
-    ao.blendIntensity = 0.7;
+    ao.blendIntensity = 0.9;
     c.addPass(ao); G.aoPass = ao;
   } else if (G.ao) {
     const ao = new GTAOPass(G.scene, G.camera, w, h);
     ao.output = GTAOPass.OUTPUT.Default;
-    ao.updateGtaoMaterial({ radius: 1.2, distanceExponent: 1.4, thickness: 1.5, scale: 1.0, samples: 12 });
+    ao.updateGtaoMaterial({ radius: 2.2, distanceExponent: 1.4, thickness: 1.5, scale: 1.0, samples: 12 });
     ao.updatePdMaterial({ lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: 6, rings: 2, samples: 12 });
-    ao.blendIntensity = 0.7;
+    ao.blendIntensity = 0.9;
     c.addPass(ao); G.aoPass = ao;
   } else G.aoPass = null;
   const bloom = new UnrealBloomPass(new THREE.Vector2(w, h), 0.28, 0.45, 0.95);

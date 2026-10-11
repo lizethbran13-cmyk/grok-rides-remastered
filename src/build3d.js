@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import { M, glow } from './mats.js';
 import { GEO, mat4, cg } from './geo.js';
-import { B, D, Bn } from './chunks.js';
+import { B, D, Bn, L } from './chunks.js';
 import { textGeo } from './text3d.js';
 export const NIGHT = {}; // materials that light up at night
 function nm(key, color, o) { if (NIGHT[key]) return NIGHT[key]; const m = new THREE.MeshStandardMaterial(Object.assign({ color, roughness: 0.15, metalness: 0.5, emissive: 0xffd58a, emissiveIntensity: 0 }, o || {})); m.userData = { keep: true, noUber: true, night: o && o.nightI != null ? o.nightI : 0.9 }; delete m.nightI; NIGHT[key] = m; return m; }
@@ -18,9 +18,14 @@ export class Frame {
   w(lx, lz) { return [this.x + lx * this.c + lz * this.s, this.z - lx * this.s + lz * this.c]; }
   add(geo, mat, lx, ly, lz, rx = 0, ry = 0, rz = 0, sx = 1, sy = sx, sz = sx, kind = 'B') {
     const [wx, wz] = [this.x, this.z]; const bt = kind === 'D' ? D(wx, wz) : kind === 'N' ? Bn(wx, wz) : B(wx, wz);
-    _m.copy(this.base).multiply(mat4(lx, ly, lz, rx, ry, rz, sx, sy, sz)); bt.add(geo, mat, _m.clone()); return this;
+    _m.copy(this.base).multiply(mat4(lx, ly, lz, rx, ry, rz, sx, sy, sz)); bt.add(geo, mat, _m.clone());
+    // far LOD: big shell pieces (two dimensions over 3 m) also go into the cell's far batch, at low tessellation
+    if (kind !== 'D' && !this.noFar) { let big = geo.userData.big; if (big === undefined) { geo.computeBoundingBox(); const b = geo.boundingBox, e = [b.max.x - b.min.x, b.max.y - b.min.y, b.max.z - b.min.z]; big = geo.userData.big = e.filter((v) => v > 3).length >= 2 ? e : 0; }
+      if (big && [big[0] * sx, big[1] * sy, big[2] * sz].filter((v) => v > 3).length >= 2) L(wx, wz).add(geo.userData.lo || geo, mat, _m.clone()); }
+    return this;
   }
-  rb(mat, w, h, d, r, lx, ly, lz, ry = 0, kind) { return this.add(GEO.rbox(w, h, d, r, 2), mat, lx, ly, lz, 0, ry, 0, 1, 1, 1, kind); }
+  far(geo, mat, lx, ly, lz, ry = 0) { _m.copy(this.base).multiply(mat4(lx, ly, lz, 0, ry, 0)); L(this.x, this.z).add(geo, mat, _m.clone()); return this; }
+  rb(mat, w, h, d, r, lx, ly, lz, ry = 0, kind) { const g = GEO.rbox(w, h, d, r, 2); if (!g.userData.lo) g.userData.lo = GEO.rbox(w, h, d, r, 1); return this.add(g, mat, lx, ly, lz, 0, ry, 0, 1, 1, 1, kind); }
   rb1(mat, w, h, d, r, lx, ly, lz, ry = 0, kind) { return this.add(GEO.rbox(w, h, d, r, 1), mat, lx, ly, lz, 0, ry, 0, 1, 1, 1, kind); }
   bx(mat, w, h, d, lx, ly, lz, ry = 0, kind) { return this.add(GEO.box(w, h, d), mat, lx, ly, lz, 0, ry, 0, 1, 1, 1, kind); }
   text(str, size, mat, lx, ly, lz, ry = 0, kind = 'N') { const g = textGeo(str, size, size * 0.18); return this.add(g, typeof mat === 'number' ? NEON(mat) : mat, lx, ly, lz, 0, ry, 0, 1, 1, 1, kind); }
@@ -36,10 +41,10 @@ export function windowOn(F, lx, ly, fz, w, h, frame, lit, ry = 0) {
   put(GEO.box(w, h, 0.08), gm, lx, ly, fz + 0.07);
   put(GEO.box(w + 0.5, 0.14, 0.36), frame, lx, ly - h / 2 - 0.14, fz + 0.14);
 }
-export function awning(F, lx, ly, lz, w, c1, c2) { // striped curved awning
-  const n = Math.max(3, Math.round(w / 0.9)), sw = w / n;
-  for (let i = 0; i < n; i++) F.add(cg('awn' + sw.toFixed(2), () => new THREE.CylinderGeometry(1, 1, sw, 14, 1, true, 0, Math.PI / 2).rotateZ(Math.PI / 2).rotateY(Math.PI / 2)), M(i % 2 ? c2 : c1, { r: 0.6, side: THREE.DoubleSide }), lx - w / 2 + sw * (i + 0.5), ly - 1, lz, 0, Math.PI / 2, 0, 1, 1, 1);
-  F.rb1(M(c1, { r: 0.6 }), w + 0.1, 0.18, 0.18, 0.06, lx, ly - 0.95, lz + 1.02);
+export function awning(F, lx, ly, lz, w, c1, c2) { // striped sloped awning with a scalloped-look valance (solid boxes, both sides lit)
+  const n = Math.max(3, Math.round(w / 0.9)), sw = w / n, a = 0.5, L = 1.5;
+  for (let i = 0; i < n; i++) { const m = M(i % 2 ? c2 : c1, { r: 0.6 }), x = lx - w / 2 + sw * (i + 0.5); F.add(GEO.box(sw, 0.06, L), m, x, ly - 0.5 * Math.sin(a) * L, lz + Math.cos(a) * L / 2, a, 0, 0); F.add(GEO.box(sw, 0.32, 0.05), m, x, ly - Math.sin(a) * L - 0.16, lz + Math.cos(a) * L + 0.01); }
+  F.rb1(M(0x334155, { r: 0.4, m: 0.6 }), w + 0.1, 0.1, 0.1, 0.03, lx, ly, lz + 0.03);
 }
 export function door(F, lz, col, w = 1.6, h = 2.5, glowDoor = true) {
   F.rb(C(col, { r: 0.45, cc: 0.4 }), w, h, 0.2, 0.08, 0, h / 2, lz + 0.05);
@@ -59,10 +64,14 @@ export function sign(F, text, lx, ly, lz, size, board, letter, ry = 0) {
 const greens = [0x4caf50, 0x5cbf4a, 0x3f9e44, 0x6cc24a, 0x7ccf3a];
 export function tree(x, y, z, s = 1, kind = 'round', seed = 0) {
   const b = B(x, z), d = D(x, z); void d;
+  const lf = L(x, z);
+  if (kind === 'round') lf.mesh(GEO.sphere(2.1 * s, 8, 6), M(greens[seed % 5], { r: 0.8 }), x, y + 3.7 * s, z);
+  else if (kind === 'pine' || kind === 'snowpine') lf.mesh(GEO.cone(1.9 * s, 5.5 * s, 8), M(kind === 'snowpine' ? 0x2f7d4a : 0x2e8b57, { r: 0.8 }), x, y + 3.6 * s, z);
+  else if (kind === 'palm') lf.mesh(GEO.sphere(1.8 * s, 8, 5), M(0x22a447, { r: 0.7 }), x, y + 6.8 * s, z, 0, 0, 0, 1, 0.35, 1);
   if (kind === 'round') {
     b.mesh(GEO.cyl(0.22 * s, 0.32 * s, 2.6 * s, 10), M(0x8b5a2b, { r: 0.9 }), x, y + 1.3 * s, z);
     const g = M(greens[seed % 5], { r: 0.8 });
-    b.mesh(GEO.sphere(1.6 * s, 14, 10), g, x, y + 3.6 * s, z); b.mesh(GEO.sphere(1.15 * s, 12, 9), g, x + 0.9 * s, y + 3.1 * s, z + 0.4 * s); b.mesh(GEO.sphere(1.1 * s, 12, 9), g, x - 0.7 * s, y + 3.3 * s, z - 0.6 * s); b.mesh(GEO.sphere(0.95 * s, 12, 9), g, x + 0.1 * s, y + 4.6 * s, z - 0.2 * s);
+    b.mesh(GEO.sphere(1.6 * s, 12, 9), g, x, y + 3.6 * s, z); b.mesh(GEO.sphere(1.15 * s, 10, 8), g, x + 0.9 * s, y + 3.1 * s, z + 0.4 * s); b.mesh(GEO.sphere(1.1 * s, 10, 8), g, x - 0.7 * s, y + 3.3 * s, z - 0.6 * s); b.mesh(GEO.sphere(0.95 * s, 10, 8), g, x + 0.1 * s, y + 4.6 * s, z - 0.2 * s);
   } else if (kind === 'pine' || kind === 'snowpine') {
     b.mesh(GEO.cyl(0.2 * s, 0.3 * s, 2 * s, 8), M(0x6b4423, { r: 0.9 }), x, y + 1 * s, z);
     const g = M(kind === 'snowpine' ? 0x2f7d4a : 0x2e8b57, { r: 0.8 }), sn = M(0xf8fbff, { r: 0.6 });
@@ -87,7 +96,15 @@ export function streetLamp(x, y, z, ry) { // pole + curved arm + glowing lamp he
   b.mesh(GEO.torus(0.8, 0.07, Math.PI / 2, 6, 12), pole, x + c * 0.8, y + 6.4, z + s2 * 0.8, 0, ry + Math.PI / 2, 0);
   b.mesh(GEO.rbox(0.7, 0.22, 0.42, 0.1, 2), pole, x + c * 1.6, y + 7.15, z + s2 * 1.6, 0, ry, 0);
   Bn(x, z).mesh(GEO.rbox(0.56, 0.08, 0.32, 0.04, 1), LAMP(), x + c * 1.6, y + 7.02, z + s2 * 1.6, 0, ry, 0);
+  LAMPS.push(x + c * 1.6, z + s2 * 1.6);
 }
+export const LAMPS = [];
+// soft light pool on the ground (lamp posts at night, headlights): real flat geometry with a radial falloff shader, additive
+export const POOL = { u: { uA: { value: 0 } } };
+export function poolMat(col, k = 1) { const m = new THREE.ShaderMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4,
+  uniforms: { uC: { value: new THREE.Color(col) }, uK: { value: k }, uA: POOL.u.uA },
+  vertexShader: 'varying vec2 vU; void main(){ vU = uv * 2.0 - 1.0; vec4 p = vec4(position, 1.0);\n#ifdef USE_INSTANCING\np = instanceMatrix * p;\n#endif\ngl_Position = projectionMatrix * modelViewMatrix * p; }',
+  fragmentShader: 'uniform vec3 uC; uniform float uK; uniform float uA; varying vec2 vU; void main(){ float r = length(vU); float a = pow(max(0.0, 1.0 - r), 2.2) * uA * uK; gl_FragColor = vec4(uC * a, 1.0); }' }); m.userData.keep = true; return m; }
 export function bench(x, y, z, ry) { const F = new Frame(x, y, z, ry), w = M(0xb45309, { r: 0.7 }), m = M(0x1f2937, { r: 0.4, m: 0.6 });
   for (let i = 0; i < 3; i++) F.rb1(w, 1.8, 0.08, 0.16, 0.03, 0, 0.5, -0.2 + i * 0.2, 0, 'D'); for (let i = 0; i < 2; i++) F.rb1(w, 1.8, 0.16, 0.06, 0.03, 0, 0.75 + i * 0.22, -0.32, 0, 'D');
   for (const sx of [-0.75, 0.75]) F.rb1(m, 0.08, 0.5, 0.5, 0.03, sx, 0.25, -0.05, 0, 'D'); }
