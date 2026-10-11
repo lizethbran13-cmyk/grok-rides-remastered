@@ -36,7 +36,7 @@ function rimGeo(r, w, style) {
     const n = style === 'star' ? 6 : style === 'mesh' ? 12 : style === 'disc' ? 0 : 5;
     for (let i = 0; i < n; i++) { const a = i / n * PI * 2; const g = new THREE.BoxGeometry(w * 0.2, r * 0.55, style === 'mesh' ? 0.04 : 0.09); add(g, new THREE.Matrix4().makeRotationX(a).multiply(new THREE.Matrix4().makeTranslation(w * 0.28, r * 0.3, 0))); }
     add(new THREE.CylinderGeometry(r * 0.16, r * 0.16, w * 0.62, 12).rotateZ(PI / 2), new THREE.Matrix4());
-    void B2; const { mergeGeometries } = THREE.BufferGeometryUtils || {}; void mergeGeometries;
+    void B2;
     return mergeList(parts);
   });
 }

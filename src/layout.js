@@ -264,9 +264,12 @@ function stars() {
   for (const b of BLD) if (n < 52 && b.style === 'tower' && rnd() < 0.3) pt(b.x, b.z, b.y + b.roofY + 1.6);
   for (const [x, z] of [[-820, -820], [600, -1150], [-50, 120], [1240, 600], [1160, 1160], [100, 1300], [-1200, 300], [0, -1300]]) pt(x, z, Math.max(heightAt(x, z), 0.2) + 1.6);
 }
-// traffic signals at the 4-way city junctions
+// traffic signals at the 4-way city junctions (lamps are real spheres sharing 6 materials, so every junction switches for free)
+const SIGG = new THREE.SphereGeometry(0.2, 14, 10);
+const sm = (c) => { const m = new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: 0.1, roughness: 0.3 }); m.userData = { keep: true, noUber: true }; return m; };
+export const SIG = { nsR: sm(0xff3030), nsA: sm(0xffb020), nsG: sm(0x30ff70), ewR: sm(0xff3030), ewA: sm(0xffb020), ewG: sm(0x30ff70) };
 function signals() {
   for (const id in NODES) { const n = NODES[id]; if (!id.startsWith('c') || n.edges.length < 4) continue; n.signal = { heads: [] };
-    for (const [sx, sz, ry] of [[1, 1, 0], [-1, -1, Math.PI], [1, -1, Math.PI / 2], [-1, 1, -Math.PI / 2]]) { const x = n.x + sx * (n.r + 1.8), z = n.z + sz * (n.r + 1.8); const [p, y] = trafficLight(x, heightAt(x, z), z, ry); addCircle(x, z, 0.3, 8); n.signal.heads.push({ x: p[0], y, z: p[1], ns: Math.abs(Math.sin(ry)) < 0.5 }); }
+    for (const [sx, sz, ry] of [[1, 1, 0], [-1, -1, Math.PI], [1, -1, Math.PI / 2], [-1, 1, -Math.PI / 2]]) { const x = n.x + sx * (n.r + 1.8), z = n.z + sz * (n.r + 1.8); const [p, y] = trafficLight(x, heightAt(x, z), z, ry); addCircle(x, z, 0.3, 8); const ns = Math.abs(Math.sin(ry)) < 0.5; n.signal.heads.push({ x: p[0], y, z: p[1], ns }); for (const [dy, k] of [[0.52, 'R'], [0, 'A'], [-0.52, 'G']]) { const mm = new THREE.Mesh(SIGG, SIG[(ns ? 'ns' : 'ew') + k]); mm.position.set(p[0], y + dy, p[1]); mm.rotation.y = ry; mm.scale.set(1, 1, 1.5); cellAt(p[0], p[1]).det.add(mm); } }
     LIGHTS.push(n); }
 }

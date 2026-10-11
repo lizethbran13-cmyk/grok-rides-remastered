@@ -28,7 +28,7 @@ G.camera.far = 1300; G.camera.near = 0.25; G.camera.updateProjectionMatrix();
 G.scene.add(CHUNKS.root);
 const T = []; const tm = (f) => { const a = performance.now(); f(); T.push((performance.now() - a) | 0); };
 tm(layout); tm(buildTerrain); tm(() => buildWater(G.scene)); tm(buildRoads); tm(buildChunks); App.T = T;
-initEnv(); tm(buildMapBase); IN.initInteriors(); TR.initTraffic(); ACT.initActivities();
+initEnv(); tm(buildMapBase); IN.initInteriors(); TR.initTraffic(); ACT.initActivities(); NET.initNet();
 G.renderer.info.autoReset = false;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v)), damp = (a, b, k, dt) => a + (b - a) * (1 - Math.exp(-k * dt));
 const angD = (a, b) => { let d = (b - a) % (Math.PI * 2); if (d > Math.PI) d -= Math.PI * 2; if (d < -Math.PI) d += Math.PI * 2; return d; };
@@ -257,7 +257,7 @@ function step(dt) {
   if (I.mapQ) { I.mapQ = false; if ($('bigmap').classList.contains('hidden')) openMap(); else { $('bigmap').classList.add('hidden'); UI.open = false; } }
   if (I.actQ) { I.actQ = false; doAct(); }
   if (I.walkQ) { I.walkQ = false; if (ST.mode === 'drive') getOut(); else if (curAct && curAct.fn === getIn) getIn(); }
-  if (ST.mode === 'drive') { const c = ST.car; const inp = UI.open ? { thr: 0, steer: 0, pitchIn: 0, active: true, hand: true } : readDrive(); ACT.mods(inp, c); c.update(dt, inp, { buffs: S.d.buffs }); ME.x = c.x; ME.z = c.z; ME.y = c.y; if (c.dmg >= 1 && !c.wrecked) ACT.wreck(c); }
+  if (ST.mode === 'drive') { const c = ST.car; const inp = UI.open ? { thr: 0, steer: 0, pitchIn: 0, active: true, hand: true } : readDrive(); ACT.mods(inp, c); c.update(dt, inp, { buff: ACT.buffFlags() }); ME.x = c.x; ME.z = c.z; ME.y = c.y; if (c.dmg >= 1 && !c.wrecked) ACT.wreck(c); }
   else if (ST.mode === 'foot') { walk(dt); if (ST.car && ST.car.parked) ST.car.update(dt, { thr: 0, steer: 0, active: false }); }
   if (ST.mode !== 'title') {
     TR.updateTraffic(dt); ACT.updateActivities(dt); IN.updateInterior(dt); NET.updateNet(dt);
@@ -279,6 +279,7 @@ function loop() {
   try { step(dt); } catch (e) { if (!App.err) { App.err = String(e && e.stack || e); console.error(e); } }
   G.renderer.info.reset(); render(dt); App.info = Object.assign({}, G.renderer.info.render);
 }
+App.sim = (sec, h = 1 / 30) => { for (let t = 0; t < sec; t += h) step(h); };
 App.step = step; App.start = start; App.getIn = getIn; App.getOut = getOut; App.menu = menu; App.openMap = openMap; App.respawn = respawn;
 load(); $('nameIn').value = S.d.name || '';
 initInput(); showTitle(); updateChunks(G.camera, true);
