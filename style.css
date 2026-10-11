@@ -27,11 +27,15 @@ input.name,input.code{font:inherit;font-weight:900;font-size:18px;padding:12px;b
 .foot{color:#fff;font-weight:900;text-decoration:none;text-shadow:0 2px 3px rgba(0,0,0,.5)}
 #hud{position:fixed;inset:0;pointer-events:none;z-index:10}
 #hud button,#hud canvas,#hud .chip{pointer-events:auto}
-#top{position:absolute;top:calc(env(safe-area-inset-top) + 6px);left:calc(env(safe-area-inset-left) + 8px);right:calc(env(safe-area-inset-right) + 236px);display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+/* top-left HUD: one stacked column (pills wrap first, then the bars), so nothing can overlap at any width */
+#tl{position:absolute;top:calc(env(safe-area-inset-top) + 6px);left:calc(env(safe-area-inset-left) + 8px);right:calc(env(safe-area-inset-right) + 172px);display:flex;flex-direction:column;align-items:flex-start;gap:6px;pointer-events:none}
+#tl>*{pointer-events:auto}
+#top{position:static;display:flex;gap:6px;flex-wrap:wrap;align-items:center;max-width:100%}
+#top .pill{flex:0 0 auto}
 .pill{background:rgba(255,255,255,.93);border-radius:14px;padding:5px 10px;font-weight:900;font-size:14px;box-shadow:0 2px 6px rgba(0,0,0,.18);white-space:nowrap}
 .rbtn{width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.93);font-weight:1000;font-size:16px;box-shadow:0 2px 6px rgba(0,0,0,.2)}
 .rbtn.small{width:36px;height:36px;font-size:16px}
-#left{position:absolute;top:calc(env(safe-area-inset-top) + 52px);left:calc(env(safe-area-inset-left) + 8px);display:flex;flex-direction:column;gap:5px;max-width:46vw}
+#left{position:static;display:flex;flex-direction:column;gap:5px;width:min(170px,100%);max-width:100%}
 .chip{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.9);border-radius:12px;padding:3px 8px;font-size:13px;font-weight:900;width:112px}
 .bar{flex:1;height:8px;background:#e2e8f0;border-radius:6px;overflow:hidden}.bar i{display:block;height:100%;width:50%;background:#22c55e;border-radius:6px}
 #jobBox{background:rgba(255,255,255,.93);border-radius:12px;padding:6px 9px;font-size:13px;font-weight:800;box-shadow:0 2px 6px rgba(0,0,0,.18);pointer-events:auto}
@@ -82,4 +86,7 @@ input.name,input.code{font:inherit;font-weight:900;font-size:18px;padding:12px;b
 #bigC{width:100%;aspect-ratio:1/1;border-radius:14px;touch-action:none;background:#6fbf52}
 #mapLeg{font-size:12px;font-weight:800;color:#475569;margin:6px 0}
 #mates{display:flex;flex-direction:column;gap:3px}.mate{font-size:12px;font-weight:900;background:rgba(255,255,255,.88);border-radius:10px;padding:2px 8px}
-@media (orientation:landscape) and (max-height:500px){.pedal.gas{height:110px;width:84px}.pedal.brake,.pedal.drift{height:50px}.sbtn{height:42px;min-width:42px}#minimap{width:120px;height:120px}#bMap{top:calc(env(safe-area-inset-top) + 100px)}#gps{top:calc(env(safe-area-inset-top) + 100px);right:calc(env(safe-area-inset-right) + 50px)}#top{right:calc(env(safe-area-inset-right) + 140px)}#toasts{top:calc(env(safe-area-inset-top) + 50px)}}
+@media (orientation:landscape) and (max-height:500px){.pedal.gas{height:110px;width:84px}.pedal.brake,.pedal.drift{height:50px}.sbtn{height:42px;min-width:42px}#minimap{width:120px;height:120px}#bMap{top:calc(env(safe-area-inset-top) + 100px)}#gps{top:calc(env(safe-area-inset-top) + 100px);right:calc(env(safe-area-inset-right) + 50px)}#tl{right:calc(env(safe-area-inset-right) + 140px)}#left{width:150px}#toasts{top:calc(env(safe-area-inset-top) + 50px)}}
+
+@media (orientation:portrait){#top{max-width:212px}#toasts{top:calc(env(safe-area-inset-top) + 178px)}}
+@media (orientation:portrait) and (max-width:360px){#minimap{width:120px;height:120px}#bMap{top:calc(env(safe-area-inset-top) + 100px)}#tl{right:calc(env(safe-area-inset-right) + 136px)}}
