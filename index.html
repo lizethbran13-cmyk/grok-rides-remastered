@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1ea7ff">
+<title>Grok Rides Remastered</title>
+<link rel="stylesheet" href="style.css?v=1">
+</head><body>
+<canvas id="c"></canvas>
+<div id="hud" class="hidden">
+  <div id="top">
+    <div class="pill" id="pMoney">💵 <b id="moneyN">$0</b></div>
+    <div class="pill" id="pRegion">📍 <span id="regionN"></span></div>
+    <div class="pill" id="pClock"><span id="clockN">☀️ 9:00</span></div>
+    <button id="bMenu" class="rbtn" aria-label="Menu">II</button>
+  </div>
+  <div id="left">
+    <div class="chip" id="cDmg">🔧<div class="bar"><i id="dmgBar"></i></div></div>
+    <div class="chip" id="cFuel">⛽<div class="bar"><i id="fuelBar"></i></div></div>
+    <div class="chip hidden" id="cNitro">🔥<div class="bar"><i id="nitroBar"></i></div></div>
+    <div id="jobBox" class="hidden"></div>
+    <div id="mates"></div>
+  </div>
+  <canvas id="minimap" width="220" height="220"></canvas>
+  <button id="bMap" class="rbtn small" aria-label="Map">🗺️</button>
+  <div id="gps" class="hidden"><i id="gpsArrow">➤</i><span id="gpsT"></span></div>
+  <div id="bigText"></div>
+  <div id="speedo"><b id="spdN">0</b><small>MPH</small><div id="altN" class="hidden"></div></div>
+  <div id="joy"><div id="joyKnob"></div></div>
+  <div id="pads">
+    <div id="smallBtns">
+      <button id="bNitro" class="sbtn hidden">🔥</button>
+      <button id="bHorn" class="sbtn">📣</button>
+      <button id="bWalk" class="sbtn wide2">🚶<small>WALK</small></button>
+    </div>
+    <div id="airBtns" class="hidden"><button id="bUp" class="sbtn up">▲<small id="upL">UP</small></button><button id="bDown" class="sbtn">▼<small>DOWN</small></button></div>
+    <div id="pedRow">
+      <div id="pbCol"><button id="bDrift" class="pedal drift"><span id="driftL">🌀 DRIFT</span></button><button id="bBrake" class="pedal brake"><span>BRAKE</span></button></div>
+      <button id="bGas" class="pedal gas"><span>GAS</span></button>
+    </div>
+  </div>
+  <div id="footBtns" class="hidden"><button id="bJump" class="pedal gas small">JUMP</button></div>
+  <button id="bAct" class="hidden"></button>
+  <div id="kbd">W/S gas/brake · A/D steer · Space drift · Shift nitro · R/F up/down · E action · G walk · M map</div>
+</div>
+<div id="toasts"></div>
+<div id="hit"></div>
+<div id="pnl" class="screen hidden"><div id="pnlCard" class="card"></div></div>
+<div id="bigmap" class="screen hidden"><div class="card mapcard"><canvas id="bigC" width="760" height="760"></canvas><div id="mapLeg"></div><button id="bMapClose" class="btn gray small">CLOSE</button></div></div>
+<div id="fade"></div>
+<div id="title" class="screen">
+  <div class="tcard">
+    <div class="logo"><div class="l1">GROK RIDES</div><div class="l2">REMASTERED</div><div class="tag">A brand new Tempest-engine open world. Drive, fly, float and explore!</div></div>
+    <div class="menuCol">
+      <input id="nameIn" class="name" maxlength="12" placeholder="Your name" autocomplete="off">
+      <button id="bPlay" class="btn green">▶ PLAY</button>
+      <button id="bOnline" class="btn blue">🤝 PLAY WITH FRIENDS</button>
+      <button id="bHow" class="btn gray small">HOW TO PLAY</button>
+      <div id="loadMsg" class="sub">Building the world…</div>
+    </div>
+    <a class="foot" href="https://lizethbran13-cmyk.github.io/grok-arcade/">← Grok Arcade</a>
+  </div>
+</div>
+<script src="peerjs.min.js"></script>
+<script src="grok-net.js?v=1"></script>
+<script src="game.js?v=1"></script>
+</body></html>
