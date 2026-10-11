@@ -22,7 +22,7 @@ import * as ACT from './activities.js';
 import * as SHOP from './shops.js';
 import * as NET from './coop.js';
 const Q = new URLSearchParams(location.search);
-const App = window.__rr = Object.assign(ST, { ready: false, G, W, S, I, SKY, BLD, PLACES, THREE });
+const App = window.__rr = Object.assign(ST, { ready: false, G, W, S, I, SKY, BLD, PLACES, THREE, VEH, isWater });
 initGfx(document.getElementById('c'));
 G.camera.far = 1300; G.camera.near = 0.25; G.camera.updateProjectionMatrix();
 G.scene.add(CHUNKS.root);
