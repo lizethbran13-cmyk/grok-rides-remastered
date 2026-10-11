@@ -81,7 +81,9 @@ export function midrise(F, w, d, h, col, rnd, o = {}) {
       else if (!bal && rnd() < 0.3) { F.bx(C(0x92400e, { r: 0.8 }), 1.6, 0.35, 0.4, x, y - 1.15, d / 2 + 0.3); F.add(GEO.sphere(0.3, 8, 6), C([0xef4444, 0xfacc15, 0xec4899][(rnd() * 3) | 0], { r: 0.7 }), x, y - 0.85, d / 2 + 0.3, 0, 0, 0, 2.2, 0.6, 0.8); }
     }
     if (bal) for (let x = -w / 2 + 4; x <= w / 2 - 3.9; x += 6.4) balcony(F, x, y - 1.25, d / 2, 3.4, trim);
-    for (let z = -d / 2 + 2.4; z <= d / 2 - 2.3; z += 3.2) { windowOn(F, z, y, w / 2, 1.5, 1.8, trim, lit, Math.PI / 2); windowOn(F, -z, y, w / 2, 1.5, 1.8, trim, !lit, -Math.PI / 2); }
+    if (o.city) { // side walls face narrow gaps: framed ribbon windows (one pane + frame + sill per floor per side)
+      for (const sx of [-1, 1]) { F.bx(trim, 0.12, 2.1, d - 4.4, sx * (w / 2 + 0.02), y, 0); F.bx(lit ? GLASS() : GLASS2(), 0.1, 1.8, d - 4.8, sx * (w / 2 + 0.07), y, 0); F.bx(trim, 0.36, 0.14, d - 4.2, sx * (w / 2 + 0.14), y - 1.04, 0); }
+    } else for (let z = -d / 2 + 2.4; z <= d / 2 - 2.3; z += 3.2) { windowOn(F, z, y, w / 2, 1.5, 1.8, trim, lit, Math.PI / 2); windowOn(F, -z, y, w / 2, 1.5, 1.8, trim, !lit, -Math.PI / 2); }
   }
   if (o.city) for (let y = 4.4 + fl * 0.6; y < h - 1.6; y += fl) F.bx(lit ? GLASS() : GLASS2(), w - 3, 1.8, 0.1, 0, y, -d / 2 - 0.05);
   for (let y = 4.4 + fl * 0.6; y < h - 1.6; y += fl) { const g = lit ? GLASS() : GLASS2(); F.far(GEO.box(w - 3, 1.8, 0.1), g, 0, y, d / 2 + 0.06); F.far(GEO.box(w - 3, 1.8, 0.1), g, 0, y, -d / 2 - 0.06); F.far(GEO.box(0.1, 1.8, d - 3), g, w / 2 + 0.06, y, 0); F.far(GEO.box(0.1, 1.8, d - 3), g, -w / 2 - 0.06, y, 0); }

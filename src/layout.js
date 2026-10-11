@@ -8,7 +8,8 @@ import { addBox, addCircle, addRamp } from './collide.js';
 import { Frame, tree, rock, streetLamp, bench, hydrant, bin, flowerBed, trafficLight, busStop, fence, NEON, LAMP, GLASSW, sign, door } from './build3d.js';
 import { tower, midrise, shop, house, beachHouse, adobe, cabin, hangar, garageBldg } from './bldg.js';
 import { HOMES } from './data.js';
-import { makeVehicle } from './vmodels.js';
+import { addParked } from './parked.js';
+import { VEH } from './data.js';
 import { GLASS2 } from './build3d.js';
 const { heightAt, NODES, EDGES } = W;
 let seed = 1234; export const rnd = () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
@@ -196,20 +197,17 @@ function streetDressing() {
     if (urban) for (let s = 20; s < e.len - 20; s += 26) for (const side of [-1, 1]) {
       const t = W.edgePoint(e, s, side * (hw + 1.15)); if (W.surfAt(t.x, t.z) !== W.S_WALK) continue; const ty = heightAt(t.x, t.z);
       if (e.kind !== 'town') { D(t.x, t.z).mesh(GEO.box(1.4, 0.06, 1.4), M(0x374151, { r: 0.5, m: 0.6 }), t.x, ty + 0.03, t.z); tree(t.x, ty, t.z, 0.75 + rnd() * 0.15, e.kind === 'beach' ? 'palm' : 'round', (s | 0) + side); addCircle(t.x, t.z, 0.4, ty + 5); }
-      if (rnd() < 0.32) { const c = W.edgePoint(e, s + 9 + rnd() * 4, side * (hw - 1.15)); parked(c.x, heightAt(c.x, c.z), c.z, Math.atan2(c.dx * side, c.dz * side)); }
+      if (rnd() < 0.26) { const c = W.edgePoint(e, s + 9 + rnd() * 4, side * (hw - 1.15)); parked(c.x, heightAt(c.x, c.z), c.z, Math.atan2(c.dx * side, c.dz * side)); }
       if (rnd() < 0.25) { const n = W.edgePoint(e, s + 3, side * (hw + 2.2)), ny = heightAt(n.x, n.z); const col = pick([0x2563eb, 0xef4444, 0x16a34a, 0xf59e0b]); D(n.x, n.z).mesh(GEO.rbox(0.6, 1.1, 0.5, 0.06, 1), M(col, { r: 0.4, cc: 0.4 }), n.x, ny + 0.55, n.z, 0, Math.atan2(n.dx, n.dz)); D(n.x, n.z).mesh(GEO.box(0.45, 0.35, 0.05), GLASS2(), n.x + n.dz * side * 0.26, ny + 0.8, n.z - n.dx * side * 0.26, 0, Math.atan2(n.dx, n.dz)); }
     }
     if (e.len > 100 && (e.id % 3 === 0)) { const p = W.edgePoint(e, e.len / 2, hw + 2.2), y = heightAt(p.x, p.z); if (W.surfAt(p.x, p.z) === W.S_WALK) { busStop(p.x, y, p.z, Math.atan2(-p.dz, p.dx) + Math.PI / 2); STOPS.push({ e, s: e.len / 2, x: p.x, z: p.z, name: 'Stop ' + (STOPS.length + 1) }); } }
   }
 }
-const PT = new Map();
 function parked(x, y, z, yaw) {
-  const types = ['compact', 'sedanP', 'sports', 'pickup', 'taxi', 'muscle'], cols = [0xef4444, 0x3b82f6, 0xffffff, 0x111827, 0x22c55e, 0xfacc15, 0x9ca3af];
-  let t = pick(types); if (t === 'sedanP') t = 'compact'; const col = t === 'taxi' ? 0xffc61a : pick(cols), key = t + col;
-  let tp = PT.get(key); if (!tp) { const V = makeVehicle(t, { color: col, rider: false, noBeam: true }); V.root.updateMatrixWorld(true); tp = []; V.root.traverse((o) => { if (o.isMesh && o.visible !== false) tp.push([o.geometry, o.material, o.matrixWorld.clone()]); }); tp.L = V.dims.L; tp.W = V.dims.W; PT.set(key, tp); }
-  const base = new THREE.Matrix4().compose(new THREE.Vector3(x, y, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, yaw, 0)), new THREE.Vector3(1, 1, 1)), bt = D(x, z);
-  for (const [g, m, mw] of tp) bt.add(g, m, new THREE.Matrix4().multiplyMatrices(base, mw));
-  const fx = Math.sin(yaw), fz = Math.cos(yaw), r = tp.W / 2; for (const k of [-1, 0, 1]) addCircle(x + fx * k * (tp.L / 2 - r), z + fz * k * (tp.L / 2 - r), r, y + 1.6, { parked: 1 });
+  const types = ['compact', 'compact', 'sports', 'pickup', 'taxi', 'muscle'], cols = [0xef4444, 0x3b82f6, 0xffffff, 0x111827, 0x22c55e, 0xfacc15, 0x9ca3af, 0xf97316];
+  const t = pick(types), col = t === 'taxi' ? 0xffc61a : pick(cols), D = VEH[t] && VEH[t].dims || null; void D;
+  const m = new THREE.Matrix4().compose(new THREE.Vector3(x, y, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, yaw, 0)), new THREE.Vector3(1, 1, 1)); addParked(t, col, m);
+  const L = 4.3, r = 0.95, fx = Math.sin(yaw), fz = Math.cos(yaw); for (const k of [-1, 0, 1]) addCircle(x + fx * k * (L / 2 - r), z + fz * k * (L / 2 - r), r, y + 1.6, { parked: 1 });
 }
 function scatter(n, x0, z0, x1, z1, fn) { for (let i = 0; i < n; i++) { const x = x0 + rnd() * (x1 - x0), z = z0 + rnd() * (z1 - z0); if (Math.abs(x) > W.WB - 20 || Math.abs(z) > W.WB - 20) continue; if (W.roadEdge(x, z) < 6) continue; const s = W.surfAt(x, z); if (s === W.S_WATER || s === W.S_ROAD || s === W.S_WALK || s === W.S_RUNWAY || s === W.S_ICE) continue; if (inBld(x, z)) continue; fn(x, heightAt(x, z), z, s, i); } }
 function inBld(x, z) { for (const b of BLD) if (x > b.x0 - 4 && x < b.x1 + 4 && z > b.z0 - 4 && z < b.z1 + 4) return true; return false; }

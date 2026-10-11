@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 import { G, initGfx, render } from './gfx.js';
 import { CHUNKS, buildChunks, updateChunks } from './chunks.js';
+import { initParked, updateParked, showParked } from './parked.js';
 import { buildTerrain, buildWater, buildRoads, MAT } from './scenery.js';
 import * as W from './world.js';
 import { layout, BLD, PLACES } from './layout.js';
@@ -28,11 +29,11 @@ G.camera.far = 1300; G.camera.near = 0.25; G.camera.updateProjectionMatrix();
 G.scene.add(CHUNKS.root);
 const T = []; const tm = (f) => { const a = performance.now(); f(); T.push((performance.now() - a) | 0); };
 tm(layout); tm(buildTerrain); tm(() => buildWater(G.scene)); tm(buildRoads); tm(buildChunks); App.T = T;
-initEnv(); tm(buildMapBase); IN.initInteriors(); TR.initTraffic(); ACT.initActivities(); NET.initNet();
+initEnv(); initParked(); tm(buildMapBase); IN.initInteriors(); TR.initTraffic(); ACT.initActivities(); NET.initNet();
 G.renderer.info.autoReset = false;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v)), damp = (a, b, k, dt) => a + (b - a) * (1 - Math.exp(-k * dt));
 const angD = (a, b) => { let d = (b - a) % (Math.PI * 2); if (d > Math.PI) d -= Math.PI * 2; if (d < -Math.PI) d += Math.PI * 2; return d; };
-App.view = (x, y, z, tx, ty, tz) => { G.camera.position.set(x, y, z); G.camera.lookAt(tx, ty, tz); G.focus.set(tx, ty, tz); updateChunks(G.camera, true); };
+App.view = (x, y, z, tx, ty, tz) => { G.camera.position.set(x, y, z); G.camera.lookAt(tx, ty, tz); G.focus.set(tx, ty, tz); updateChunks(G.camera, true); updateParked(G.camera, true); };
 /* ---------------- player (on foot) ---------------- */
 const ME = ST.me = { P: null, x: 0, y: 2, z: 0, vy: 0, yaw: 0, ground: true, moving: 0 };
 export function rebuildMe() {
@@ -269,7 +270,7 @@ function step(dt) {
   updateEnv(dt, G.camera, rk, !!ST.inside);
   if (ST.car) ST.car.setNight(SKY.night); TR.setNight(SKY.night);
   if (MAT.waterU) MAT.waterU.uT.value += dt;
-  if (!ST.inside) updateChunks(G.camera);
+  if (!ST.inside) { updateChunks(G.camera); updateParked(G.camera); } showParked(!ST.inside);
 }
 let refreshGpsT = 0;
 function loop() {

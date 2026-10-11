@@ -37,13 +37,13 @@ export function uberMat() {
   UBER = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, metalness: 1 }); UBER.userData.keep = true;
   UBER.onBeforeCompile = (sh) => {
     sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute vec2 rm; attribute vec3 em; varying vec2 vRM; varying vec3 vEM;')
-      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvRM = rm; vEM = em;');
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvRM = rm; vEM = em * em * 4.0;\n#ifdef USE_COLOR\nvColor.rgb *= vColor.rgb;\n#endif');
     sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec2 vRM; varying vec3 vEM;')
       .replace('#include <roughnessmap_fragment>', 'float roughnessFactor = vRM.x;')
       .replace('#include <metalnessmap_fragment>', 'float metalnessFactor = vRM.y;')
       .replace('#include <emissivemap_fragment>', 'totalEmissiveRadiance = vEM;');
   };
-  UBER.customProgramCacheKey = () => 'uber1';
+  UBER.customProgramCacheKey = () => 'uber3';
   return UBER;
 }
 function route(mat) {
@@ -53,10 +53,12 @@ function route(mat) {
 // fast static batcher: add() only records (geometry, material, matrix); build() writes every piece straight into one
 // pre-sized buffer per material (no per-piece clones), so huge scenes merge quickly
 const NI = new WeakMap(), _n3 = new THREE.Matrix3();
-function baseOf(geo) {
+function baseOf(geo) { // indexed source (shared verts) so merged batches stay small; geometry without normals is faceted the old way
   let b = NI.get(geo); if (b) return b;
-  let g = geo.index ? geo.toNonIndexed() : geo; if (!g.attributes.normal) { if (g === geo) g = geo.clone(); g.computeVertexNormals(); }
-  b = { p: g.attributes.position.array, n: g.attributes.normal.array, c: g.attributes.position.count }; NI.set(geo, b); return b;
+  let g = geo, idx;
+  if (!g.attributes.normal) { g = (geo.index ? geo.toNonIndexed() : geo.clone()); g.computeVertexNormals(); }
+  if (g.index) idx = g.index.array; else { const c = g.attributes.position.count; idx = new Uint32Array(c); for (let i = 0; i < c; i++) idx[i] = i; }
+  b = { p: g.attributes.position.array, n: g.attributes.normal.array, c: g.attributes.position.count, i: idx }; NI.set(geo, b); return b;
 }
 export class Batch {
   constructor() { this.groups = new Map(); }
@@ -69,24 +71,28 @@ export class Batch {
     const out = [];
     for (const [key, list] of this.groups) {
       if (!list.length) continue; const uber = key === UBER;
-      let n = 0; for (let i = 0; i < list.length; i += 3) n += baseOf(list[i]).c;
-      const P = new Float32Array(n * 3), Nn = new Float32Array(n * 3), Cc = uber ? new Float32Array(n * 3) : null, RM = uber ? new Float32Array(n * 2) : null, EM = uber ? new Float32Array(n * 3) : null;
-      let v = 0;
+      let n = 0, ni = 0; for (let i = 0; i < list.length; i += 3) { const bs = baseOf(list[i]); n += bs.c; ni += bs.i.length; }
+      // compact attributes: float position, int8 normals, 16-bit colour / emissive, 8-bit roughness+metalness
+      const P = new Float32Array(n * 3), Nn = new Int8Array(n * 3), Cc = uber ? new Uint8Array(n * 3) : null, RM = uber ? new Uint8Array(n * 2) : null, EM = uber ? new Uint8Array(n * 3) : null, IX = n > 65535 ? new Uint32Array(ni) : new Uint16Array(ni);
+      let v = 0, w = 0;
       for (let i = 0; i < list.length; i += 3) {
-        const bs = baseOf(list[i]), mat = list[i + 1], m = list[i + 2], e = m.elements, p = bs.p, nn = bs.n; _n3.getNormalMatrix(m); const ne = _n3.elements;
+        const bs = baseOf(list[i]), mat = list[i + 1], m = list[i + 2], e = m.elements, p = bs.p, nn = bs.n, si = bs.i; _n3.getNormalMatrix(m); const ne = _n3.elements;
+        const flip = m.determinant() < 0;
+        for (let k = 0; k < si.length; k += 3) { if (flip) { IX[w++] = si[k] + v; IX[w++] = si[k + 2] + v; IX[w++] = si[k + 1] + v; } else { IX[w++] = si[k] + v; IX[w++] = si[k + 1] + v; IX[w++] = si[k + 2] + v; } }
         let cr = 0, cg2 = 0, cb = 0, r = 0, mt = 0, er = 0, eg = 0, eb = 0;
-        if (uber) { cr = mat.color.r; cg2 = mat.color.g; cb = mat.color.b; r = mat.clearcoat > 0 ? Math.min(mat.roughness, 0.35) : mat.roughness; mt = mat.metalness; const ei = mat.emissiveIntensity || 0; er = mat.emissive.r * ei; eg = mat.emissive.g * ei; eb = mat.emissive.b * ei; }
+        if (uber) { cr = Math.round(Math.sqrt(mat.color.r) * 255); cg2 = Math.round(Math.sqrt(mat.color.g) * 255); cb = Math.round(Math.sqrt(mat.color.b) * 255); r = (mat.clearcoat > 0 ? Math.min(mat.roughness, 0.35) : mat.roughness) * 255; mt = mat.metalness * 255; const ei = (mat.emissiveIntensity || 0) / 4, q = (c) => Math.round(Math.sqrt(Math.min(1, c * ei)) * 255); er = q(mat.emissive.r); eg = q(mat.emissive.g); eb = q(mat.emissive.b); }
         for (let k = 0; k < bs.c; k++, v++) {
           const x = p[k * 3], y = p[k * 3 + 1], z = p[k * 3 + 2];
           P[v * 3] = e[0] * x + e[4] * y + e[8] * z + e[12]; P[v * 3 + 1] = e[1] * x + e[5] * y + e[9] * z + e[13]; P[v * 3 + 2] = e[2] * x + e[6] * y + e[10] * z + e[14];
-          const a = nn[k * 3], b = nn[k * 3 + 1], c = nn[k * 3 + 2]; let nx = ne[0] * a + ne[3] * b + ne[6] * c, ny = ne[1] * a + ne[4] * b + ne[7] * c, nz = ne[2] * a + ne[5] * b + ne[8] * c; const L = Math.hypot(nx, ny, nz) || 1;
-          Nn[v * 3] = nx / L; Nn[v * 3 + 1] = ny / L; Nn[v * 3 + 2] = nz / L;
+          const a = nn[k * 3], b = nn[k * 3 + 1], c = nn[k * 3 + 2]; let nx = ne[0] * a + ne[3] * b + ne[6] * c, ny = ne[1] * a + ne[4] * b + ne[7] * c, nz = ne[2] * a + ne[5] * b + ne[8] * c; const L = 127 / (Math.hypot(nx, ny, nz) || 1);
+          Nn[v * 3] = Math.round(nx * L); Nn[v * 3 + 1] = Math.round(ny * L); Nn[v * 3 + 2] = Math.round(nz * L);
           if (uber) { Cc[v * 3] = cr; Cc[v * 3 + 1] = cg2; Cc[v * 3 + 2] = cb; RM[v * 2] = r; RM[v * 2 + 1] = mt; EM[v * 3] = er; EM[v * 3 + 1] = eg; EM[v * 3 + 2] = eb; }
         }
       }
-      const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(P, 3)); g.setAttribute('normal', new THREE.BufferAttribute(Nn, 3));
-      if (uber) { g.setAttribute('color', new THREE.BufferAttribute(Cc, 3)); g.setAttribute('rm', new THREE.BufferAttribute(RM, 2)); g.setAttribute('em', new THREE.BufferAttribute(EM, 3)); }
+      const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(P, 3)); g.setAttribute('normal', new THREE.BufferAttribute(Nn, 3, true)); g.setIndex(new THREE.BufferAttribute(IX, 1));
+      if (uber) { g.setAttribute('color', new THREE.BufferAttribute(Cc, 3, true)); g.setAttribute('rm', new THREE.BufferAttribute(RM, 2, true)); g.setAttribute('em', new THREE.BufferAttribute(EM, 3, true)); }
       g.computeBoundingSphere(); g.computeBoundingBox(); g.userData.batch = true;
+      if (o.free) { const drop = function () { this.array = new this.array.constructor(1); }; for (const k in g.attributes) g.attributes[k].onUpload(drop); g.index.onUpload(drop); }
       const mesh = new THREE.Mesh(g, key); mesh.castShadow = o.cast !== false && !key.transparent; mesh.receiveShadow = o.receive !== false;
       mesh.matrixAutoUpdate = false; mesh.updateMatrix(); parent.add(mesh); out.push(mesh);
     }
