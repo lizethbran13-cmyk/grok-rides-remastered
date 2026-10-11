@@ -117,7 +117,9 @@ function updateCamera(dt) {
   _t.set(tx, ty, tz);
   _d.set(tx - Math.sin(CAM.yaw) * Math.cos(CAM.pitch) * dist, ty + Math.sin(CAM.pitch) * dist, tz - Math.cos(CAM.yaw) * Math.cos(CAM.pitch) * dist);
   // no clipping: pull in in front of walls / hills; inside rooms clamp to the room box
-  if (ST.inside) IN.clampCam(_d, _t);
+  if (ST.inside) { const r = IN.inRoom(); if (r) { // dollhouse framing: camera stays outside the open front, under the ceiling line, sliding with you
+      const hw = r.w / 2, hd = r.d / 2; _d.set(clamp(tx, IN.IX - hw + 1.6, IN.IX + hw - 1.6) + I.camDX * 0, IN.IY + Math.min(r.h - 0.55, 3.5), IN.IZ + hd + 2.6 + (I.zoom - 1) * 3);
+      _t.set(clamp(tx, IN.IX - hw + 1, IN.IX + hw - 1) * 0.7 + IN.IX * 0.3, IN.IY + 1.1, Math.min(tz, IN.IZ + hd - 1.5) * 0.8 + IN.IZ * 0.2); } else IN.clampCam(_d, _t); }
   else { const f = segBlocked(_t.x, _t.y, _t.z, _d.x, _d.y, _d.z); if (f < 1) { const ff = Math.max(0.12, f - 0.06); _d.lerpVectors(_t, _d, ff); } const g = W.heightAt(_d.x, _d.z) + 0.8; if (_d.y < g) _d.y = g; if (_d.y < W.WATER_Y + 0.6) _d.y = W.WATER_Y + 0.6; }
   if (camSnap) { CAM.pos.copy(_d); CAM.look.copy(_t); camSnap = false; }
   else { const pulledIn = _d.distanceTo(_t) < CAM.pos.distanceTo(_t) - 0.3; const k = pulledIn ? 14 : 8; CAM.pos.x = damp(CAM.pos.x, _d.x, k, dt); CAM.pos.y = damp(CAM.pos.y, _d.y, k, dt); CAM.pos.z = damp(CAM.pos.z, _d.z, k, dt); CAM.look.x = damp(CAM.look.x, _t.x, 16, dt); CAM.look.y = damp(CAM.look.y, _t.y, 10, dt); CAM.look.z = damp(CAM.look.z, _t.z, 16, dt); }

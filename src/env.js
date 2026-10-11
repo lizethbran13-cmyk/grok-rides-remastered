@@ -14,7 +14,7 @@ const PAL = {
   snow: { top: C(0x2a8cf5), hor: C(0xcfeaff), fog: C(0xc9e2f7), sun: C(0xfff8ea), gnd: C(0x8a9aae) },
   dusk: { top: C(0x5b4bd6), hor: C(0xffa77a), fog: C(0xf3a888), sun: C(0xffb877), gnd: C(0xb08a7a) },
   night: { top: C(0x0a1238), hor: C(0x24346e), fog: C(0x1c2850), sun: C(0x9fb4ff), gnd: C(0x2a3550) },
-  rain: { top: C(0x4b5d86), hor: C(0x9aabc6), fog: C(0x8d9db8), sun: C(0xd6e2ff), gnd: C(0x6f8a7a) }
+  rain: { top: C(0x34405c), hor: C(0x7d8aa3), fog: C(0x76849e), sun: C(0xc8d4ee), gnd: C(0x4f6658) }
 };
 const t1 = new THREE.Color(), t2 = new THREE.Color(), t3 = new THREE.Color(), t4 = new THREE.Color(), t5 = new THREE.Color();
 let rainMesh = null, puddles = null, roadCol0 = null; const lastReg = { k: 'day', w: 0 };
